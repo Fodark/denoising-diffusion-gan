@@ -604,7 +604,7 @@ if __name__ == '__main__':
         for rank in range(size):
             if rank == 0:
                 load_dotenv()
-                wandb.init(project="ddgan", name=args.exp_name, settings=wandb.Settings(start_method='fork'))
+                wandb.init(project="ddgan", name=args.exp, settings=wandb.Settings(start_method='fork'))
             args.local_rank = rank
             global_rank = rank + args.node_rank * args.num_process_per_node
             global_size = args.num_proc_node * args.num_process_per_node
@@ -620,7 +620,7 @@ if __name__ == '__main__':
         print('starting in debug mode')
 
         load_dotenv()
-        wandb.init(project="ddgan", name=args.exp_name, settings=wandb.Settings(start_method='fork'))
+        wandb.init(project="ddgan", name=args.exp, settings=wandb.Settings(start_method='fork'))
         
         init_processes(0, size, train, args)
    
