@@ -7,6 +7,7 @@
 
 
 import argparse
+from dotenv import load_dotenv
 import torch
 import numpy as np
 
@@ -27,6 +28,8 @@ from datasets_prep.lmdb_datasets import LMDBDataset
 from torch.multiprocessing import Process
 import torch.distributed as dist
 import shutil
+
+import wandb
 
 def copy_source(file, output_dir):
     shutil.copyfile(file, os.path.join(output_dir, os.path.basename(file)))
@@ -370,6 +373,8 @@ def train(rank, gpu, args):
                 
                     grad_penalty = args.r1_gamma / 2 * grad_penalty
                     grad_penalty.backward()
+                else:
+                    grad_penalty = torch.zeros(1).to(device)
 
             # train with fake
             latent_z = torch.randn(batch_size, nz, device=device)
@@ -425,6 +430,14 @@ def train(rank, gpu, args):
             global_step += 1
             if iteration % 100 == 0:
                 if rank == 0:
+                    wandb.log({
+                        'errD': errD.item(),
+                        'errG': errG.item(),
+                        'grad_penalty': grad_penalty.item()
+                    })
+                    print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f grad_penalty: %.4f'
+                          % (epoch, args.num_epoch, iteration, len(data_loader),
+                             errD.item(), errG.item(), grad_penalty.item()))
                     print('epoch {} iteration{}, G Loss: {}, D Loss: {}'.format(epoch,iteration, errG.item(), errD.item()))
         
         if not args.no_lr_decay:
@@ -435,10 +448,16 @@ def train(rank, gpu, args):
         if rank == 0:
             if epoch % 10 == 0:
                 torchvision.utils.save_image(x_pos_sample, os.path.join(exp_path, 'xpos_epoch_{}.png'.format(epoch)), normalize=True)
+                wandb.log({
+                    'x_pos_sample': wandb.Image(os.path.join(exp_path, 'xpos_epoch_{}.png'.format(epoch)))
+                })
             
             x_t_1 = torch.randn_like(real_data)
             fake_sample = sample_from_model(pos_coeff, netG, args.num_timesteps, x_t_1, T, args)
             torchvision.utils.save_image(fake_sample, os.path.join(exp_path, 'sample_discrete_epoch_{}.png'.format(epoch)), normalize=True)
+            wandb.log({
+                'fake_sample': wandb.Image(os.path.join(exp_path, 'sample_discrete_epoch_{}.png'.format(epoch)))
+            })
             
             if args.save_content:
                 if epoch % args.save_content_every == 0:
@@ -470,6 +489,10 @@ def init_processes(rank, size, fn, args):
     fn(rank, gpu, args)
     dist.barrier()
     cleanup()  
+
+    if rank == 0:
+        load_dotenv()
+        wandb.init(project="ddgan", name=args.exp_name, settings=wandb.Settings(start_method='fork'))
 
 def cleanup():
     dist.destroy_process_group()    
