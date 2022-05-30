@@ -490,7 +490,7 @@ def init_processes(rank, size, fn, args):
     dist.barrier()
     cleanup()  
 
-    if rank == 0:
+    if args.local_rank == 0:
         load_dotenv()
         wandb.init(project="ddgan", name=args.exp_name, settings=wandb.Settings(start_method='fork'))
 
