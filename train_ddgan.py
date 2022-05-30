@@ -490,10 +490,6 @@ def init_processes(rank, size, fn, args):
     dist.barrier()
     cleanup()  
 
-    if args.local_rank == 0:
-        load_dotenv()
-        wandb.init(project="ddgan", name=args.exp_name, settings=wandb.Settings(start_method='fork'))
-
 def cleanup():
     dist.destroy_process_group()    
 #%%
@@ -606,6 +602,9 @@ if __name__ == '__main__':
     if size > 1:
         processes = []
         for rank in range(size):
+            if rank == 0:
+                load_dotenv()
+                wandb.init(project="ddgan", name=args.exp_name, settings=wandb.Settings(start_method='fork'))
             args.local_rank = rank
             global_rank = rank + args.node_rank * args.num_process_per_node
             global_size = args.num_proc_node * args.num_process_per_node
@@ -619,6 +618,9 @@ if __name__ == '__main__':
             p.join()
     else:
         print('starting in debug mode')
+
+        load_dotenv()
+        wandb.init(project="ddgan", name=args.exp_name, settings=wandb.Settings(start_method='fork'))
         
         init_processes(0, size, train, args)
    
