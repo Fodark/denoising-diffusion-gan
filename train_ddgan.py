@@ -434,11 +434,11 @@ def train(rank, gpu, args):
                         'errD': errD.item(),
                         'errG': errG.item(),
                         'grad_penalty': grad_penalty.item()
-                    })
+                    }, step=global_step)
                     print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f grad_penalty: %.4f'
                           % (epoch, args.num_epoch, iteration, len(data_loader),
                              errD.item(), errG.item(), grad_penalty.item()))
-                    print('epoch {} iteration{}, G Loss: {}, D Loss: {}'.format(epoch,iteration, errG.item(), errD.item()))
+                    # print('epoch {} iteration{}, G Loss: {}, D Loss: {}'.format(epoch,iteration, errG.item(), errD.item()))
         
         if not args.no_lr_decay:
             
@@ -450,14 +450,14 @@ def train(rank, gpu, args):
                 torchvision.utils.save_image(x_pos_sample, os.path.join(exp_path, 'xpos_epoch_{}.png'.format(epoch)), normalize=True)
                 wandb.log({
                     'x_pos_sample': wandb.Image(os.path.join(exp_path, 'xpos_epoch_{}.png'.format(epoch)))
-                })
+                }, step=global_step)
             
             x_t_1 = torch.randn_like(real_data)
             fake_sample = sample_from_model(pos_coeff, netG, args.num_timesteps, x_t_1, T, args)
             torchvision.utils.save_image(fake_sample, os.path.join(exp_path, 'sample_discrete_epoch_{}.png'.format(epoch)), normalize=True)
             wandb.log({
                 'fake_sample': wandb.Image(os.path.join(exp_path, 'sample_discrete_epoch_{}.png'.format(epoch)))
-            })
+            }, step=global_step)
             
             if args.save_content:
                 if epoch % args.save_content_every == 0:
@@ -602,9 +602,8 @@ if __name__ == '__main__':
     if size > 1:
         processes = []
         for rank in range(size):
-            if rank == 0:
-                load_dotenv()
-                wandb.init(project="ddgan", name=args.exp, settings=wandb.Settings(start_method='fork'))
+            load_dotenv()
+            wandb.init(project="ddgan", name=args.exp, group="ddp", settings=wandb.Settings(start_method='fork'))
             args.local_rank = rank
             global_rank = rank + args.node_rank * args.num_process_per_node
             global_size = args.num_proc_node * args.num_process_per_node
