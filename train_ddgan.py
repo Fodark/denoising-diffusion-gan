@@ -199,6 +199,9 @@ def train(rank, gpu, args):
     torch.cuda.manual_seed(args.seed + rank)
     torch.cuda.manual_seed_all(args.seed + rank)
     device = torch.device('cuda:{}'.format(gpu))
+
+    load_dotenv()
+    wandb.init(project="ddgan", name=args.exp, group="ddp")
     
     batch_size = args.batch_size
     
@@ -603,8 +606,6 @@ if __name__ == '__main__':
     if size > 1:
         processes = []
         for rank in range(size):
-            load_dotenv()
-            wandb.init(project="ddgan", name=args.exp, group="ddp")
             args.local_rank = rank
             global_rank = rank + args.node_rank * args.num_process_per_node
             global_size = args.num_proc_node * args.num_process_per_node
