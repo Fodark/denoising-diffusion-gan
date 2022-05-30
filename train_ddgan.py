@@ -429,12 +429,13 @@ def train(rank, gpu, args):
             
             global_step += 1
             if iteration % 100 == 0:
-                if rank == 0:
-                    wandb.log({
+                wandb.log({
                         'errD': errD.item(),
                         'errG': errG.item(),
                         'grad_penalty': grad_penalty.item()
                     }, step=global_step)
+                if rank == 0:
+                    
                     print('[%d/%d][%d/%d] Loss_D: %.4f Loss_G: %.4f grad_penalty: %.4f'
                           % (epoch, args.num_epoch, iteration, len(data_loader),
                              errD.item(), errG.item(), grad_penalty.item()))
@@ -603,7 +604,7 @@ if __name__ == '__main__':
         processes = []
         for rank in range(size):
             load_dotenv()
-            wandb.init(project="ddgan", name=args.exp, group="ddp", settings=wandb.Settings(start_method='fork'))
+            wandb.init(project="ddgan", name=args.exp, group="ddp")
             args.local_rank = rank
             global_rank = rank + args.node_rank * args.num_process_per_node
             global_size = args.num_proc_node * args.num_process_per_node
@@ -619,7 +620,7 @@ if __name__ == '__main__':
         print('starting in debug mode')
 
         load_dotenv()
-        wandb.init(project="ddgan", name=args.exp, settings=wandb.Settings(start_method='fork'))
+        wandb.init(project="ddgan", name=args.exp)
         
         init_processes(0, size, train, args)
    
